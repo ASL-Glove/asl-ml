@@ -1,0 +1,57 @@
+# Single source of truth for the ASL glove ML pipeline.
+# The firmware gets these values through the generated preprocess_config.h,
+# so change them HERE, re-run export.py, and copy the header into the firmware.
+#
+# WARNING: changing sample_rate_hz, window_frames, adc_bits, or the channel
+# list means previously recorded data no longer matches. Decide before
+# real data collection starts.
+
+sample_rate_hz: 50        # firmware DATA_COLLECTION_MODE streams at this rate
+window_frames: 50         # 50 frames @ 50 Hz = 1.0 s per model input
+stride_frames: 10         # step between training windows (0.2 s)
+adc_bits: 12              # firmware uses analogReadResolution(12) -> 0..4095
+
+# Column names in the CSV the firmware streams, in order.
+# Must match the firmware's CSV_HEADER string exactly.
+channels:
+  analog:  [a0, a1, a2, a3, a6]      # flex sensors, raw ADC counts (finger mapping below)
+  digital: [d2, d3, d4, d5, d6]      # contacts, 1 = pressed
+  accel:   [ax, ay, az]              # g
+  gyro:    [gx, gy, gz]              # deg/s
+
+# Which finger each flex channel is on (confirmed 2026-11-18). Labels only: used in
+# collect.py's calibration printout; the model itself doesn't need them.
+finger_names:
+  a0: pinky
+  a1: ring
+  a2: middle
+  a3: index
+  a6: thumb
+
+accel_range_g: 4.0       # BMI270 library default (+/-4 g)
+gyro_range_dps: 2000.0    # BMI270 library default (+/-2000 dps)
+
+# Class list. Index 0 is "none" (no sign / transition / resting hand).
+# Remove letters here if the team decides to support only a subset.
+classes: [none, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z]
+
+# Letters that involve motion (recorded slightly longer by collect.py).
+motion_classes: [J, Z]
+
+# Drop the edges of each recorded LETTER (not 'none') before making windows:
+# the first moments after "GO!" are the hand still moving into the sign.
+# Applied in preprocess.py at training time, so changing these never requires re-recording.
+trim_start_s: 0.25
+trim_end_s: 0.10
+
+# On-device decision rule (copied into preprocess_config.h).
+confidence_threshold: 0.70   # below this, report "none"
+agreement_windows: 3         # same letter N predictions in a row before sending over BLE
+inference_every_frames: 10   # run the model every 10 frames (5 Hz)
+
+# Training
+train:
+  epochs: 40
+  batch_size: 64
+  val_fraction: 0.2          # fraction of SESSIONS held out (never random frames)
+  seed: 42

@@ -1,0 +1,8 @@
+# Laptop-side only. The glove runs the exported model with LiteRT for Microcontrollers.
+tensorflow>=2.16,<2.20   # training + LiteRT (.tflite) converter
+numpy
+pandas
+pyyaml
+pyserial
+scikit-learn
+matplotlib
